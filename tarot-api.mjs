@@ -59,12 +59,15 @@ export function offlineFormat(inputs) {
 
 export function modelMessages(inputs, concise = false) {
   const focus = inputs.kind === 'followup' ? inputs.supplemental ?? focusedEntry(inputs.entries,inputs.followup) : null;
+  const latestUserQuestion = inputs.previous?.at(-1)?.question;
   const task = focus
-    ? '这是一张牌的追问。第一句用 targetCard.card 的准确牌名回应 focusQuestion，然后结合这张牌的方向、牌位和含义给出一个具体观察或动作。只读该张牌。不要重新解读整组。返回 {"text":"..."}。'
+    ? '第一句用 targetCard.card 的准确牌名回答 focusQuestion。从 latestUserQuestion、previous 和 initialReading 找出这一问承接的细节。相关的时间或预算以用户最后说的为准，在回答里明确写出，并给出能在这个限制内完成的一小步和做到什么算完成。只读 targetCard，前文只用于理解问题。返回 {"text":"..."}。'
     : readingInstructions[inputs.kind];
   const payload = focus ? {
-    originalQuestion:inputs.question, focusQuestion:inputs.supplemental?.purpose ?? inputs.followup,
+    question:inputs.question, focusQuestion:inputs.supplemental?.purpose ?? inputs.followup,
     targetCard:focus, ...(inputs.background ? { background:inputs.background } : {}),
+    ...(latestUserQuestion ? { latestUserQuestion } : {}),
+    previous:inputs.previous, ...(inputs.initialReading ? { initialReading:inputs.initialReading } : {}),
   } : inputs;
   return [
     { role:'system', content:readingMethod + '\n此次任务：' + task

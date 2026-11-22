@@ -34,6 +34,8 @@ Windows 双击 `打开月汐塔罗.cmd`。也可运行 `node server.mjs`，再�
 
 也可以使用 Cloudflare Workers Free 和 Workers AI。配置在 `cloudflare/wrangler.jsonc`，与 Node.js 后端共用塔罗提示词与接口。部署前在 Cloudflare 登录并核对 Workers 计划为 Free，再运行 `npx wrangler deploy --config cloudflare/wrangler.jsonc`。部署后的 Worker 网址用于 `TAROT_API_BASE`。Cloudflare 免费推理额度用完后，模型接口会暂停响应，网页仍可使用内置牌义。
 
+Cloudflare Worker 支持通过 [DeepSeek 官方 API](https://api-docs.deepseek.com/quick_start/pricing/) 按量使用 `deepseek-flash`。在 Worker 中添加 `DEEPSEEK_API_KEY` 类型为 Secret 的变量后，澄清、解读和追问会优先调用 DeepSeek。密钥留在服务端。若未配置密钥或 DeepSeek 暂时无法响应，Worker 使用现有的 Workers AI 模型。`/api/consult` 响应的 `model` 字段记录实际生成回复的模型。
+
 ## 验证与出处
 
 运行 `node --test` 验证牌组、选牌逻辑与报告内容。

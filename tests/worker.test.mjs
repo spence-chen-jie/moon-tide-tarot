@@ -46,11 +46,69 @@ test('Worker focuses supplemental queries on the actual drawn card',async()=>{
     { position:'眼前的重点',purpose:'核心主题',card:'愚人',orientation:'正位',meaning:'起步' },
   ]};
   const env={ TAROT_ALLOWED_ORIGINS:origin, AI:{ async run(_model,options){
-    assert.match(options.messages[1].content,/节制/);
-    assert.doesNotMatch(options.messages[1].content,/愚人/);
+    const context = JSON.parse(options.messages[1].content);
+    assert.equal(context.targetCard.card,'节制');
+    assert.equal(context.question,'我想问感情');
+    assert.equal(context.focusQuestion,'如何打开沟通');
+    assert.ok(!Object.hasOwn(context,'entries'));
     return { response:{ text:'节制提示，先问对方现在是否适合聊几句。' } };
   } }};
   const response=await worker.fetch(construct('/api/consult','POST',payload),env);
   assert.equal(response.status,200);
   assert.match((await response.json()).text,/节制/);
+});
+
+test('Worker uses the DeepSeek secret only for the official API and labels the actual model',async t=>{
+  const entries = [{ position:'眼前的重点',purpose:'核心主题',card:'愚人',orientation:'正位',meaning:'起步' }];
+  const question = '我每晚只有十五分钟，怎么准备下周三的设计面试？';
+  const env = { TAROT_ALLOWED_ORIGINS:origin, DEEPSEEK_API_KEY:'test-deepseek-secret', AI:{run(){assert.fail('Unexpected Qwen fallback');}} };
+  const request = t.mock.method(globalThis,'fetch',async (url, options)=>{
+    assert.equal(url,'https://api.deepseek.com/chat/completions');
+    assert.equal(options.headers.Authorization,'Bearer test-deepseek-secret');
+    const { model:requestedModel, messages, response_format } = JSON.parse(options.body);
+    assert.equal(requestedModel,'deepseek-flash');
+    assert.equal(response_format.type,'json_object');
+    assert.equal(JSON.parse(messages[1].content).question,question);
+    assert.match(messages[0].content,/时间|期限/);
+    return Response.json({choices:[{message:{content:JSON.stringify({overview:'先挑一件设计作品',details:['愚人提示从一次短练习起步。'],next:'今晚用十五分钟讲一遍作品过程。'})}}]});
+  });
+  const response = await worker.fetch(construct('/api/consult','POST',{kind:'reading',question,spread:'single',entries}),env);
+  assert.equal(response.status,200);
+  assert.equal((await response.json()).model,'deepseek-flash');
+  assert.equal(request.mock.callCount(),1);
+});
+
+test('Worker keeps Qwen available if DeepSeek cannot return a usable reply',async t=>{
+  t.mock.method(globalThis,'fetch',async()=>new Response('',{status:402}));
+  const env = { TAROT_ALLOWED_ORIGINS:origin, DEEPSEEK_API_KEY:'test-deepseek-secret', AI:{ async run(){
+    return { response:{text:'你关心的是目前的工作压力，还是在比较一个新岗位？'} };
+  } } };
+  const response = await worker.fetch(construct('/api/consult','POST',{kind:'clarify',question:'我想问工作'}),env);
+  assert.equal(response.status,200);
+  assert.equal((await response.json()).model,model);
+});
+
+test('A focused follow-up passes the latest question, past context and just the named card',async()=>{
+  const entries = [
+    { position:'现状',purpose:'核心主题',card:'愚人',orientation:'正位',meaning:'起步' },
+    { position:'阻碍',purpose:'当前顾虑',card:'月亮',orientation:'逆位',meaning:'厘清猜测' },
+    { position:'建议',purpose:'可做的事',card:'节制',orientation:'正位',meaning:'分配时间' },
+  ];
+  const previous = [{question:'我每晚只有十五分钟',answer:'可以先做一次短练习。'}];
+  const context = {overview:'这次看面试准备',next:'试着每晚练一个问题'};
+  const payload = {kind:'followup',question:'我怎么准备下周的面试？',followup:'第 3 张牌说的第一步具体怎么做？',entries,previous,context};
+  const env={ TAROT_ALLOWED_ORIGINS:origin, AI:{ async run(_model,options){
+    const data = JSON.parse(options.messages[1].content);
+    assert.equal(data.targetCard.card,'节制');
+    assert.equal(data.focusQuestion,payload.followup);
+    assert.equal(data.question,payload.question);
+    assert.equal(data.latestUserQuestion,previous[0].question);
+    assert.deepEqual(data.previous,previous);
+    assert.deepEqual(data.initialReading,context);
+    assert.ok(!Object.hasOwn(data,'entries'));
+    assert.match(options.messages[0].content,/时间或预算.*明确写出/);
+    return {response:{text:'建议位的节制提示，今晚用十五分钟演练一个问题。'}};
+  } } };
+  const response=await worker.fetch(construct('/api/consult','POST',payload),env);
+  assert.equal(response.status,200);
 });
