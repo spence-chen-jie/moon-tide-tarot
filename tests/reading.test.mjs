@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readdir } from 'node:fs/promises';
-import { cards, spreads, classify, deal, choose, composeReading, answerFollowup, formatReport, drawSupplement, supplementRequest } from '../public/reading.mjs';
+import { cards, spreads, classify, deal, choose, composeReading, answerFollowup, conversationalReply, focusedEntry, formatReport, drawSupplement, supplementRequest } from '../public/reading.mjs';
 import { cardPositions, tableState } from '../public/table-layout.mjs';
 
 test('78 unique cards and fully defined skill spreads', () => {
@@ -90,4 +90,18 @@ test('explicit supplemental cards use the remaining deck and preserve the origin
   session.reading = composeReading(session);
   assert.equal(session.reading.entries.length,3);
   assert.match(formatReport(session), /补牌 1/);
+});
+
+test('follow-up fallback responds to the new message without replaying the original reading',()=>{
+  const session = { question:'我想弄清这段关系目前的状态。',spread:'choice',selected:deal(false).slice(0,5),replies:[] };
+  session.reading = composeReading(session);
+  const reply = answerFollowup(session,'她主动来找我复合吗？');
+  assert.match(reply,/复合/);
+  assert.ok(!reply.includes(session.question));
+  assert.ok(!reply.includes(session.reading.entries.at(-1).card));
+  assert.ok(!reply.includes(session.reading.next));
+  assert.match(answerFollowup(session,'我已经试过了'),/发生|回应/);
+  assert.match(conversationalReply('谢谢你！'),/不客气/);
+  assert.equal(conversationalReply('谢谢你，不过她又来联系我了'),null);
+  assert.equal(focusedEntry(session.reading.entries,'我不懂你刚才的建议'),null);
 });

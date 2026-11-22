@@ -83,9 +83,32 @@ test('A focused follow-up passes the latest question, past context and just the 
     assert.deepEqual(data.previous,previous);
     assert.deepEqual(data.initialReading,context);
     assert.ok(!Object.hasOwn(data,'entries'));
+    assert.equal(options.messages.at(-1).content,payload.followup);
     assert.match(options.messages[0].content,/时间或预算.*明确写出/);
     return {response:{text:'建议位的节制提示，今晚用十五分钟演练一个问题。'}};
   } } };
   const response=await worker.fetch(construct('/api/consult','POST',payload),env);
   assert.equal(response.status,200);
+});
+
+test('Worker rejects a parapunctuated replay of its recent reply and anchors on the new message',async()=>{
+  const question = '我想弄清这段关系目前的状态。';
+  const followup = '她昨晚主动打电话来，我应该怎么回？';
+  const answer = '先看看他有没有主动找你。如果一直没有，可以暂时把注意力放回自己的生活。';
+  const payload = {kind:'followup',question,followup,previous:[{question:'我们还有可能吗',answer}],entries:[
+    { position:'眼前的重点',purpose:'核心主题',card:'愚人',orientation:'正位',meaning:'起步' },
+  ]};
+  const env = { TAROT_ALLOWED_ORIGINS:origin, AI:{ async run(){
+    return {response:{text:answer.replace('。','，')}};
+  } } };
+  const repeated = await worker.fetch(construct('/api/consult','POST',payload),env);
+  assert.equal(repeated.status,502);
+  env.AI.run = async (_id,options)=>{
+    assert.match(options.messages[0].content,/上一轮|上轮/);
+    assert.deepEqual(options.messages.at(-1),{role:'user',content:followup});
+    return {response:{text:'她昨晚已经主动来电，这回可以先问她是有事想说，还是想找时间聊聊。'}};
+  };
+  const revised = await worker.fetch(construct('/api/consult','POST',payload),env);
+  assert.equal(revised.status,200);
+  assert.match((await revised.json()).text,/昨晚/);
 });

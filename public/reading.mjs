@@ -116,7 +116,17 @@ export function composeReading(session) {
   return { entries, overview, next: prompts[classify(session.question).topic][2] };
 }
 
+export function conversationalReply(question) {
+  const text = question.trim().replace(/[。！？!?，,～~]+$/u,'');
+  if (/^(谢谢(?:你|老师)?|多谢|感谢(?:你|老师)?|辛苦了)$/.test(text)) return '不客气。你可以慢慢想，我在这儿。';
+  if (/^(嗯+|好的?|好吧|嗯嗯好|明白了?|我明白了|懂了|知道了)$/.test(text)) return '好。想接着聊的时候，我们再继续。';
+  if (/^(不太准|不太贴切|不太像我|说得不对|不是这个意思)$/.test(text)) return '明白，刚才可能理解偏了。哪一句和你实际经历最不一样？';
+  return null;
+}
+
 export function answerFollowup(session, question) {
+  const conversational = conversationalReply(question);
+  if (conversational) return conversational;
   if (/换个(话题|问题|主题)|问另一件事|开一轮新的/.test(question)) {
     return '可以。请用页面顶部的「新的读牌」开启一场会话，再告诉我你这次想问什么。';
   }
@@ -126,13 +136,12 @@ export function answerFollowup(session, question) {
   const index = cardNumber(question);
   const focus = focusedEntry(note.entries, question);
   if (index !== null && !focus) return '这次牌阵共有 ' + note.entries.length + ' 张牌。你可以用牌名或牌位来追问其中一张。';
-  const entry = focus ?? note.entries.at(-1);
-  const explanation = '这组牌里，「' + entry.card + ' · ' + entry.orientation + '」在' + entry.position + '位，对应' + entry.purpose + '。它提示你留意' + entry.meaning + '。';
-  if (/怎么做|怎么办|开口|行动|开始|先做/.test(question)) return explanation + '\n\n' + note.next;
-  if (/他在想|她在想|对方.*(想法|心里)|一定|会不会|什么时候会/.test(question)) {
-    return explanation + '\n\n可以把它当作一个观察方向，先看已经发生的互动和能直接确认的信息。' + note.next;
-  }
-  return explanation + '\n\n回到你最初的问题「' + session.question + '」，你可以想想最近哪一个实际细节和这个主题最接近。';
+  if (focus) return '我先讲' + focus.position + '位的' + focus.card + '（' + focus.orientation + '）。放在这个位置，我会留意' + focus.meaning + '。';
+  if (/试过了|已经(做了|说了|问了|发了|联系了)/.test(question)) return '你已经试过了。之后发生了什么，或者对方是怎么回应的？';
+  if (/怎么开口|怎么发消息|怎么回复|怎么回[他她]|话术/.test(question)) return '如果你想先听听对方的想法，可以从一句轻一点的话开始：「你现在方便聊几句吗？不方便的话也没关系。」';
+  if (/复合/.test(question)) return '光靠牌面很难判断对方会不会主动提复合。最近有没有发生过明确的主动联系，或者对方说过希望再聊聊？';
+  if (/他在想|她在想|对方.*(想法|心里)|一定|会不会|什么时候会/.test(question)) return '这件事还要看现实里发生了什么。有没有一个最近的动作、回复或变化，让你特别想确认这一点？';
+  return '我还没接准你这句最想问的是什么。你能说说刚发生的事，或指出想接着聊的那一句吗？';
 }
 
 export function cardNumber(question) {
@@ -145,7 +154,8 @@ export function focusedEntry(entries, question) {
   const index = cardNumber(question);
   if (index !== null) return entries[index] ?? null;
   return entries.find(item => question.includes(item.card))
-    ?? entries.find(item => question.includes(item.position)) ?? null;
+    ?? entries.find(({position}) => question.trim() === position || question.includes(position + '位') || question.includes(position + '那张'))
+    ?? null;
 }
 
 export function formatReport(session) {

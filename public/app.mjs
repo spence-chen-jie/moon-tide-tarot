@@ -1,4 +1,4 @@
-import { cards, spreads, prompts, classify, deal, choose, composeReading, answerFollowup, formatReport, drawSupplement, supplementRequest, cardNumber, focusedEntry } from './reading.mjs';
+import { cards, spreads, prompts, classify, deal, choose, composeReading, answerFollowup, conversationalReply, formatReport, drawSupplement, supplementRequest, cardNumber, focusedEntry } from './reading.mjs';
 import { TABLE_PAGE_SIZE, deckPageCount, tableState } from './table-layout.mjs';
 import { apiBase } from './deployment.mjs';
 
@@ -255,13 +255,14 @@ function chatPanel() {
     reveal: '选牌完成。翻牌后，我们先逐张解读，再把牌放在一起看。',
     reading: session.reading ? '解读已完成。你可以追问一张牌，或聊聊这次牌阵里与你最有关的一点。' : '牌面已经确定，我正在整理它们和你问题的联系。',
   };
-  const lines = session.replies.flatMap(item => [visitorBubble(item.question), assistantBubble(item.answer)]).join('');
+  const lines = session.replies.map((item,index) => visitorBubble(item.question)
+    + (waiting === 'followup' && index === session.replies.length - 1 ? '' : assistantBubble(item.answer))).join('');
   return `<aside class="dialogue" aria-labelledby="chat-heading">
     <h2 id="chat-heading">读牌对话</h2>
     <div class="dialogue-scroll" aria-live="polite">${visitorBubble(session.firstQuestion || session.question)}
       ${session.firstQuestion && session.firstQuestion !== session.question ? visitorBubble(session.question) : ''}
       ${assistantBubble(stage === 'clarify' && session.guidance ? session.guidance : directions[stage])}
-      ${lines}${waiting ? assistantBubble(waiting === 'clarify' ? '正在整理你的问题…' : '正在看这次的牌阵…') : ''}
+      ${lines}${waiting ? assistantBubble(waiting === 'clarify' ? '正在整理你的问题…' : waiting === 'followup' ? '正在回复…' : '正在看这次的牌阵…') : ''}
     </div>
     ${stage === 'reading' && session.reading ? `<form data-form="followup" class="followup-form">
       <label for="followup" class="sr-only">继续追问</label>
@@ -385,6 +386,11 @@ async function followup(question) {
     session.replies.push({ question, answer });
     save(); render(); announce('追问已回答。'); focusAfterRender('#followup');
   };
+  const conversational = conversationalReply(question);
+  if (conversational) {
+    finalText(conversational);
+    return;
+  }
   if (session.waitingForSupplementFocus && /不补了|取消补牌|算了/.test(question)) {
     session.waitingForSupplementFocus = false;
     finalText('好，我们接着看刚才那组牌。');

@@ -37,7 +37,16 @@ export function inputsOf(data) {
 }
 
 export function extractOutput(parsed, inputs) {
-  if (inputs.kind !== 'reading') return validString(parsed?.text, 1500) ? { text: parsed.text.trim() } : null;
+  if (inputs.kind !== 'reading') {
+    if (!validString(parsed?.text,1500)) return null;
+    const text = parsed.text.trim();
+    if (inputs.kind === 'followup') {
+      const normalize = value => value.normalize('NFKC').replace(/[\p{P}\p{Z}\s]/gu,'');
+      const reply = normalize(text);
+      if (reply.length >= 12 && inputs.previous?.some(turn => normalize(turn.answer) === reply)) return null;
+    }
+    return { text };
+  }
   const { overview, details, next } = parsed ?? {};
   if (!validString(overview, 1800) || !validString(next, 1200) || !Array.isArray(details)
     || details.length !== inputs.entries.length || details.some(detail => !validString(detail, 1000))) return null;
@@ -61,17 +70,19 @@ export function modelMessages(inputs, concise = false) {
   const focus = inputs.kind === 'followup' ? inputs.supplemental ?? focusedEntry(inputs.entries,inputs.followup) : null;
   const latestUserQuestion = inputs.previous?.at(-1)?.question;
   const task = focus
-    ? '第一句用 targetCard.card 的准确牌名回答 focusQuestion。从 latestUserQuestion、previous 和 initialReading 找出这一问承接的细节。相关的时间或预算以用户最后说的为准，在回答里明确写出，并给出能在这个限制内完成的一小步和做到什么算完成。只读 targetCard，前文只用于理解问题。返回 {"text":"..."}。'
+    ? readingInstructions.followup + ' 本轮点名了一张牌。用 targetCard.card 的准确牌名，并结合这张牌的牌位和方向。相关的时间或预算以用户最后说的为准，在回答里明确写出。补牌只解释 focusQuestion。'
     : readingInstructions[inputs.kind];
+  const { followup,...background } = inputs;
   const payload = focus ? {
-    question:inputs.question, focusQuestion:inputs.supplemental?.purpose ?? inputs.followup,
+    question:inputs.question, focusQuestion:inputs.supplemental?.purpose ?? followup,
     targetCard:focus, ...(inputs.background ? { background:inputs.background } : {}),
     ...(latestUserQuestion ? { latestUserQuestion } : {}),
     previous:inputs.previous, ...(inputs.initialReading ? { initialReading:inputs.initialReading } : {}),
-  } : inputs;
+  } : background;
   return [
     { role:'system', content:readingMethod + '\n此次任务：' + task
-      + (concise ? '每个字段使用简洁的完整句子，逐张解读每张约30字，综合和行动各约80字。' : '') },
+      + (concise && inputs.kind === 'reading' ? '每个字段使用简洁的完整句子，逐张解读每张约30字，综合和行动各约80字。' : '') },
     { role:'user', content:JSON.stringify(payload) },
+    ...(inputs.kind === 'followup' ? [{role:'user',content:followup}] : []),
   ];
 }
