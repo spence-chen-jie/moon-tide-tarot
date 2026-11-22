@@ -105,6 +105,8 @@ test('Worker rejects a parapunctuated replay of its recent reply and anchors on 
   assert.equal(repeated.status,502);
   env.AI.run = async (_id,options)=>{
     assert.match(options.messages[0].content,/上一轮|上轮/);
+    assert.match(options.messages[0].content,/一到三句/);
+    assert.doesNotMatch(options.messages[0].content,/凯尔特十字|逐张解读/);
     assert.deepEqual(options.messages.at(-1),{role:'user',content:followup});
     return {response:{text:'她昨晚已经主动来电，这回可以先问她是有事想说，还是想找时间聊聊。'}};
   };

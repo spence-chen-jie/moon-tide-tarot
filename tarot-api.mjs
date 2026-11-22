@@ -1,5 +1,5 @@
 import { spreads, focusedEntry } from './public/reading.mjs';
-import { readingInstructions, readingMethod } from './tarot-method.mjs';
+import { conversationMethod, readingInstructions, readingMethod } from './tarot-method.mjs';
 
 function validString(value, max) { return typeof value === 'string' && value.trim().length > 0 && value.length <= max; }
 
@@ -68,6 +68,7 @@ export function offlineFormat(inputs) {
 
 export function modelMessages(inputs, concise = false) {
   const focus = inputs.kind === 'followup' ? inputs.supplemental ?? focusedEntry(inputs.entries,inputs.followup) : null;
+  const method = inputs.kind === 'followup' ? conversationMethod : readingMethod;
   const latestUserQuestion = inputs.previous?.at(-1)?.question;
   const task = focus
     ? readingInstructions.followup + ' 本轮点名了一张牌。用 targetCard.card 的准确牌名，并结合这张牌的牌位和方向。相关的时间或预算以用户最后说的为准，在回答里明确写出。补牌只解释 focusQuestion。'
@@ -80,7 +81,7 @@ export function modelMessages(inputs, concise = false) {
     previous:inputs.previous, ...(inputs.initialReading ? { initialReading:inputs.initialReading } : {}),
   } : background;
   return [
-    { role:'system', content:readingMethod + '\n此次任务：' + task
+    { role:'system', content:method + '\n此次任务：' + task
       + (concise && inputs.kind === 'reading' ? '每个字段使用简洁的完整句子，逐张解读每张约30字，综合和行动各约80字。' : '') },
     { role:'user', content:JSON.stringify(payload) },
     ...(inputs.kind === 'followup' ? [{role:'user',content:followup}] : []),
