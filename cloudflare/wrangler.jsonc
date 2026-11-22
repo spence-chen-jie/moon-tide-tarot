@@ -1,0 +1,15 @@
+{
+  "name": "moon-tide-tarot-api",
+  "main": "worker.mjs",
+  "compatibility_date": "2026-11-19",
+  "workers_dev": true,
+  "preview_urls": false,
+  "ai": { "binding": "AI" },
+  "vars": {
+    "TAROT_ALLOWED_ORIGINS": "https://spence-chen-jie.github.io",
+    "TAROT_WORKER_MODEL": "@cf/qwen/qwen3.8-27b"
+  },
+  "ratelimits": [
+    { "name": "TAROT_LIMIT", "namespace_id": "764129", "simple": { "limit": 12, "period": 60 } }
+  ]
+}

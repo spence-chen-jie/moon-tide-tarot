@@ -32,6 +32,8 @@ Windows 双击 `打开月汐塔罗.cmd`。也可运行 `node server.mjs`，再�
 
 将 GitHub Pages 的发布来源设为 GitHub Actions，并设置仓库变量 `TAROT_API_BASE`，值为已运行的 HTTPS 后端来源。工作流会先验证跨域和一次模型问询，再发布前端。可用 `node scripts/build-pages.mjs` 在本机构建相同的 `dist/pages` 目录。
 
+也可以使用 Cloudflare Workers Free 和 Workers AI。配置在 `cloudflare/wrangler.jsonc`，与 Node.js 后端共用塔罗提示词与接口。部署前在 Cloudflare 登录并核对 Workers 计划为 Free，再运行 `npx wrangler deploy --config cloudflare/wrangler.jsonc`。部署后的 Worker 网址用于 `TAROT_API_BASE`。Cloudflare 免费推理额度用完后，模型接口会暂停响应，网页仍可使用内置牌义。
+
 ## 验证与出处
 
 运行 `node --test` 验证牌组、选牌逻辑与报告内容。

@@ -1,0 +1,74 @@
+import { spreads, focusedEntry } from './public/reading.mjs';
+import { readingInstructions, readingMethod } from './tarot-method.mjs';
+
+function validString(value, max) { return typeof value === 'string' && value.trim().length > 0 && value.length <= max; }
+
+function entryOf(entry) {
+  if (!entry || !['position','purpose','card','orientation','meaning'].every(key => validString(entry[key],key === 'purpose' ? 480 : 200))) return null;
+  const { position, purpose, card, orientation, meaning } = entry;
+  return { position, purpose, card, orientation, meaning };
+}
+
+export function inputsOf(data) {
+  if (!data || typeof data !== 'object' || !Object.hasOwn(readingInstructions, data.kind) || !validString(data.question, 480)) return null;
+  const { kind, question, spread, entries, followup, previous, background, context, supplemental, earlierSupplements } = data;
+  if (kind === 'clarify') return { kind, question };
+  const readingBackground = validString(background,480) && background !== question ? { background } : {};
+  if (!Array.isArray(entries) || ![1,3,5,10].includes(entries.length)) return null;
+  const safeEntries = entries.map(entryOf);
+  if (safeEntries.some(entry => entry === null)) return null;
+  if (kind === 'reading' && typeof spread === 'string' && Object.hasOwn(spreads,spread) && spreads[spread].positions.length === entries.length) {
+    return { kind, question, ...readingBackground, spread, entries:safeEntries };
+  }
+  if (kind === 'followup' && validString(followup, 480)) {
+    const history = Array.isArray(previous) ? previous.slice(-6).filter(item => (
+      item && validString(item.question, 480) && validString(item.answer, 1500)
+    )).map(({ question, answer }) => ({ question, answer })) : [];
+    const initialReading = validString(context?.overview,1800) && validString(context?.next,1200)
+      ? { initialReading: { overview:context.overview, next:context.next } } : {};
+    const extra = entryOf(supplemental);
+    const past = Array.isArray(earlierSupplements) ? earlierSupplements.slice(-3).map(entryOf).filter(Boolean) : [];
+    return {
+      kind, question, ...readingBackground, followup, entries:safeEntries, previous:history, ...initialReading,
+      ...(extra ? { supplemental:extra } : {}), ...(past.length ? { earlierSupplements:past } : {}),
+    };
+  }
+  return null;
+}
+
+export function extractOutput(parsed, inputs) {
+  if (inputs.kind !== 'reading') return validString(parsed?.text, 1500) ? { text: parsed.text.trim() } : null;
+  const { overview, details, next } = parsed ?? {};
+  if (!validString(overview, 1800) || !validString(next, 1200) || !Array.isArray(details)
+    || details.length !== inputs.entries.length || details.some(detail => !validString(detail, 1000))) return null;
+  return { overview, details, next };
+}
+
+export function offlineFormat(inputs) {
+  const string = { type: 'string' };
+  const properties = inputs.kind === 'reading'
+    ? { overview: string, details: { type: 'array', items: string, minItems: inputs.entries.length, maxItems: inputs.entries.length }, next: string }
+    : { text: string };
+  return {
+    type: 'json_schema',
+    json_schema: { name: 'tarot_response', strict: true, schema: {
+      type: 'object', properties, required: Object.keys(properties), additionalProperties: false,
+    } },
+  };
+}
+
+export function modelMessages(inputs, concise = false) {
+  const focus = inputs.kind === 'followup' ? inputs.supplemental ?? focusedEntry(inputs.entries,inputs.followup) : null;
+  const task = focus
+    ? '这是一张牌的追问。第一句用 targetCard.card 的准确牌名回应 focusQuestion，然后结合这张牌的方向、牌位和含义给出一个具体观察或动作。只读该张牌。不要重新解读整组。返回 {"text":"..."}。'
+    : readingInstructions[inputs.kind];
+  const payload = focus ? {
+    originalQuestion:inputs.question, focusQuestion:inputs.supplemental?.purpose ?? inputs.followup,
+    targetCard:focus, ...(inputs.background ? { background:inputs.background } : {}),
+  } : inputs;
+  return [
+    { role:'system', content:readingMethod + '\n此次任务：' + task
+      + (concise ? '每个字段使用简洁的完整句子，逐张解读每张约30字，综合和行动各约80字。' : '') },
+    { role:'user', content:JSON.stringify(payload) },
+  ];
+}
