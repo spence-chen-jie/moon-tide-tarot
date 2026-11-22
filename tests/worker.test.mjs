@@ -31,6 +31,10 @@ test('Worker respects the existing spread contract and passes a real schema to t
       assert.equal(options.store,false);
       assert.equal(options.chat_template_kwargs.enable_thinking,false);
       assert.equal(options.response_format.json_schema.schema.properties.details.minItems,1);
+      const [system] = options.messages;
+      assert.equal(system.role,'system');
+      assert.match(system.content,/月汐塔罗.*线上塔罗师/);
+      assert.match(system.content,/第一人称/);
       assert.match(options.messages[1].content,/愚人/);
       return { choices:[{message:{content:'{"overview":"愚人关注起步","details":["尝试"],"next":"先做一次小尝试"}'}}] };
     },
