@@ -2,7 +2,6 @@ import { allowApiRequest, parseAllowedOrigins } from '../http-origin.mjs';
 import { inputsOf, extractOutput, offlineFormat, modelMessages } from '../tarot-api.mjs';
 
 const defaultModel = '@cf/qwen/qwen3.8-27b';
-const deepSeekModel = 'deepseek-flash';
 const bodyLimit = 32_000;
 
 async function requestData(request) {
@@ -32,25 +31,6 @@ function resultOf(result,inputs) {
   return extractOutput(JSON.parse(clean),inputs);
 }
 
-async function deepSeekReading(key,inputs) {
-  const response = await fetch('https://api.deepseek.com/chat/completions',{
-    method:'POST',
-    headers:{ Authorization:'Bearer ' + key,'Content-Type':'application/json' },
-    redirect:'error',
-    signal:AbortSignal.timeout(40_000),
-    body:JSON.stringify({
-      model:deepSeekModel,
-      messages:modelMessages(inputs,true),
-      response_format:{type:'json_object'},
-      thinking:{type:'disabled'},
-      max_tokens:inputs.kind === 'reading' ? 1900 : 500,
-      temperature:.35,
-    }),
-  });
-  if (!response.ok) return null;
-  return resultOf(await response.json(),inputs);
-}
-
 export default {
   async fetch(request, env) {
     const path = new URL(request.url).pathname;
@@ -63,17 +43,15 @@ export default {
       return json({error:'请求来源无效'},403);
     }
     if (request.method === 'OPTIONS') return new Response(null,{status:204,headers});
-    const key = env.DEEPSEEK_API_KEY?.trim();
-    const qwenModel = env.TAROT_WORKER_MODEL || defaultModel;
-    const preferredModel = key ? deepSeekModel : env.AI ? qwenModel : null;
+    const model = env.TAROT_WORKER_MODEL || defaultModel;
     if (path === '/api/status' && request.method === 'GET') {
-      return json({mode:preferredModel ? 'model':'unavailable',provider:'server',model:preferredModel},preferredModel ? 200:503);
+      return json({mode:env.AI ? 'model':'unavailable',provider:'server',model:env.AI ? model : null},env.AI ? 200:503);
     }
     if (path !== '/api/consult' || request.method !== 'POST') return json({error:'请求方式无效'},405);
     if (!/^application\/json(?:\s*;|$)/i.test(request.headers.get('content-type') ?? '')) {
       return json({error:'读牌接口接受 JSON 请求'},415);
     }
-    if (!preferredModel) return json({error:'模型暂时不可用'},503);
+    if (!env.AI) return json({error:'模型暂时不可用'},503);
     let inputs;
     try { inputs = inputsOf(await requestData(request)); }
     catch (error) { return json({error:'请求数据无效'},error.status ?? 400); }
@@ -84,26 +62,18 @@ export default {
       return json({error:'读牌请求过于频繁，请稍等再试'},429);
     }
 
-    if (key) {
-      try {
-        const result = await deepSeekReading(key,inputs);
-        if (result) return json({...result,model:deepSeekModel});
-      } catch { /* Keep model responses and visitor inputs out of operational logs. */ }
-    }
-    if (env.AI) {
-      try {
-        const raw = await env.AI.run(qwenModel,{
-          messages:modelMessages(inputs,true),
-          response_format:offlineFormat(inputs),
-          chat_template_kwargs:{enable_thinking:false},
-          max_completion_tokens:inputs.kind === 'reading' ? 1450 : 350,
-          temperature:.35,
-          store:false,
-        });
-        const result = resultOf(raw,inputs);
-        if (result) return json({...result,model:qwenModel});
-      } catch { /* Keep model responses and visitor inputs out of operational logs. */ }
-    }
+    try {
+      const raw = await env.AI.run(model,{
+        messages:modelMessages(inputs,true),
+        response_format:offlineFormat(inputs),
+        chat_template_kwargs:{enable_thinking:false},
+        max_completion_tokens:inputs.kind === 'reading' ? 1450 : 350,
+        temperature:.35,
+        store:false,
+      });
+      const result = resultOf(raw,inputs);
+      if (result) return json({...result,model});
+    } catch { /* Keep model responses and visitor inputs out of operational logs. */ }
     return json({error:'模型暂时不可用'},502);
   },
 };

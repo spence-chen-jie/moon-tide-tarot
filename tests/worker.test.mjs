@@ -18,7 +18,7 @@ test('Worker handles HTTPS model status and only the configured Pages origin',as
   const denied = await worker.fetch(construct('/api/consult','POST',{kind:'clarify',question:'我想问工作'},'https://unrelated.invalid'),env);
   assert.equal(denied.status,403);
   const status = await worker.fetch(construct('/api/status'),env);
-  assert.equal((await status.json()).mode,'model');
+  assert.deepEqual(await status.json(),{mode:'model',provider:'server',model});
 });
 
 test('Worker respects the existing spread contract and passes a real schema to the model binding',async()=>{
@@ -37,7 +37,9 @@ test('Worker respects the existing spread contract and passes a real schema to t
   }};
   const response = await worker.fetch(construct('/api/consult','POST',payload),env);
   assert.equal(response.status,200);
-  assert.equal((await response.json()).details.length,1);
+  const result = await response.json();
+  assert.equal(result.details.length,1);
+  assert.equal(result.model,model);
 });
 
 test('Worker focuses supplemental queries on the actual drawn card',async()=>{
@@ -56,36 +58,6 @@ test('Worker focuses supplemental queries on the actual drawn card',async()=>{
   const response=await worker.fetch(construct('/api/consult','POST',payload),env);
   assert.equal(response.status,200);
   assert.match((await response.json()).text,/节制/);
-});
-
-test('Worker uses the DeepSeek secret only for the official API and labels the actual model',async t=>{
-  const entries = [{ position:'眼前的重点',purpose:'核心主题',card:'愚人',orientation:'正位',meaning:'起步' }];
-  const question = '我每晚只有十五分钟，怎么准备下周三的设计面试？';
-  const env = { TAROT_ALLOWED_ORIGINS:origin, DEEPSEEK_API_KEY:'test-deepseek-secret', AI:{run(){assert.fail('Unexpected Qwen fallback');}} };
-  const request = t.mock.method(globalThis,'fetch',async (url, options)=>{
-    assert.equal(url,'https://api.deepseek.com/chat/completions');
-    assert.equal(options.headers.Authorization,'Bearer test-deepseek-secret');
-    const { model:requestedModel, messages, response_format } = JSON.parse(options.body);
-    assert.equal(requestedModel,'deepseek-flash');
-    assert.equal(response_format.type,'json_object');
-    assert.equal(JSON.parse(messages[1].content).question,question);
-    assert.match(messages[0].content,/时间|期限/);
-    return Response.json({choices:[{message:{content:JSON.stringify({overview:'先挑一件设计作品',details:['愚人提示从一次短练习起步。'],next:'今晚用十五分钟讲一遍作品过程。'})}}]});
-  });
-  const response = await worker.fetch(construct('/api/consult','POST',{kind:'reading',question,spread:'single',entries}),env);
-  assert.equal(response.status,200);
-  assert.equal((await response.json()).model,'deepseek-flash');
-  assert.equal(request.mock.callCount(),1);
-});
-
-test('Worker keeps Qwen available if DeepSeek cannot return a usable reply',async t=>{
-  t.mock.method(globalThis,'fetch',async()=>new Response('',{status:402}));
-  const env = { TAROT_ALLOWED_ORIGINS:origin, DEEPSEEK_API_KEY:'test-deepseek-secret', AI:{ async run(){
-    return { response:{text:'你关心的是目前的工作压力，还是在比较一个新岗位？'} };
-  } } };
-  const response = await worker.fetch(construct('/api/consult','POST',{kind:'clarify',question:'我想问工作'}),env);
-  assert.equal(response.status,200);
-  assert.equal((await response.json()).model,model);
 });
 
 test('A focused follow-up passes the latest question, past context and just the named card',async()=>{
