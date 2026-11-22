@@ -16,6 +16,7 @@
       <a class="brand" href="./" aria-label="月汐塔罗首页"><span class="moon-symbol" aria-hidden="true">☾</span>月汐塔罗</a>
       <nav aria-label="应用">
         <button id="room-mode" class="plain" data-action="room-mode" aria-pressed="true" hidden>立体牌桌</button>
+        <button id="music-toggle" class="plain" type="button" aria-label="牌桌音乐" aria-haspopup="dialog"><b aria-hidden="true">♫</b><span>音乐</span></button>
         <button class="plain" data-action="help">读牌说明</button>
         <button class="outline" data-action="new">新的读牌</button>
       </nav>
@@ -28,7 +29,29 @@
   <main id="app"></main>
   <footer class="site-footer"><span>月汐塔罗</span><span>韦特–史密斯牌组 · 塔罗解读供个人反思</span></footer>
   <dialog id="dialog"></dialog>
+  <dialog id="table-music" aria-labelledby="music-title">
+    <h2 id="music-title">牌桌音乐</h2>
+    <select id="music-queue" aria-label="已导入的音频" hidden></select>
+    <audio id="music-audio" controls preload="none" hidden></audio>
+    <p id="music-status" role="status" hidden></p>
+    <form method="dialog" class="action-row">
+      <button id="music-choose" class="outline" type="button">导入本机音频</button>
+      <button class="plain">返回牌桌</button>
+    </form>
+    <input id="music-file" type="file" accept="audio/*,.m4a,.flac,.ogg,.opus" multiple hidden>
+    <details class="music-references">
+      <summary>指定曲目</summary>
+      <ul class="music-tracks">
+        <li><span>ヨスガノソラ メインテーマ -遠い空へ-<small>市川淳 · 3:31</small></span><a href="https://music.163.com/song?id=477913" target="_blank" rel="noopener noreferrer">网易云音乐</a></li>
+        <li><span>You<small>dai (M.Graveyard) · Thanks You · 3:34</small></span><a href="https://music.apple.com/us/album/you/579529359?i=579529670" target="_blank" rel="noopener noreferrer">Apple Music</a></li>
+        <li><span>親友・秋月茗子「いつも笑顔で、でも寂しそうな瞳…」<small>奥慶一 · 3:26</small></span><a href="https://columbia.jp/prod-info/COCC-72195/" target="_blank" rel="noopener noreferrer">唱片资料</a></li>
+        <li><span>時代を超える想い2<small>和田薫 · 2:27</small></span><a href="https://music.163.com/song?id=541131" target="_blank" rel="noopener noreferrer">网易云音乐</a></li>
+        <li><span>Merry Christmas Mr. Lawrence<small>坂本龍一 · Revolution ～私たちの望むものは～</small></span><a href="https://music.163.com/song?id=4899152" target="_blank" rel="noopener noreferrer">网易云音乐</a></li>
+      </ul>
+    </details>
+  </dialog>
   <div id="status" class="sr-only" role="status"></div>
   <script type="module" src="./app.mjs"></script>
+  <script type="module" src="./music.mjs"></script>
 </body>
 </html>
