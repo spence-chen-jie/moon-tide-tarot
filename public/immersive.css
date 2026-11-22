@@ -1,0 +1,88 @@
+.room-only { display: none; }
+.inspect-image { display: block; width: min(54%,190px); max-height: 57svh; object-fit: contain; margin: 8px auto 16px; }
+.inspect-image.is-reversed { transform: rotate(180deg); }
+.placemat.spread-choice { grid-template-columns: repeat(5,minmax(0,1fr)); }
+.in-room { height: 100svh; overflow: hidden; background: #110d1a; }
+#room-layer { position: fixed; inset: 0; isolation: isolate; overflow: hidden; touch-action: pan-y; background: #171121; }
+#room-canvas, #room-controls { position: absolute; inset: 0; }
+#room-canvas canvas { display: block; width: 100%; height: 100%; }
+#room-controls { pointer-events: none; }
+#room-controls .piece, #room-controls .slot-caption { position: absolute; transform: translate(-50%,-50%); }
+#room-controls .piece {
+  pointer-events: auto; cursor: pointer; border: 0; padding: 0; min-height: 0; border-radius: 5px;
+  touch-action: pan-y; -webkit-tap-highlight-color: transparent; color: transparent;
+}
+#room-controls .piece:focus-visible { outline-offset: 0; }
+#room-controls .slot-caption {
+  white-space: nowrap; color: #f1d3a1; font: 650 clamp(12px,1.15vw,17px)/1.2 var(--serif); letter-spacing: .06em;
+  text-shadow: 0 1px 4px #0b0812, 0 2px 6px #0b0812;
+}
+.in-room .site-header {
+  position: fixed; z-index: 5; inset: 0 0 auto; border: 0; pointer-events: none; background: transparent;
+}
+.in-room .header-content { padding: 0 clamp(13px,3vw,46px); max-width: none; width: 100%; }
+.in-room .site-header nav, .in-room .site-header .brand { pointer-events: auto; }
+.in-room .site-header button { background: #1a1324df; text-shadow: 0 1px 4px #0c0815; }
+.in-room .site-footer { display: none; }
+.in-room #app { position: fixed; inset: 0; z-index: 2; pointer-events: none; }
+.in-room .room-only { display: inline-flex; align-items: center; justify-content: center; }
+.in-room .session-shell { margin: 0; padding: 0; max-width: none; }
+.in-room .progress { position: absolute; left: 50%; transform: translateX(-50%); top: clamp(61px,8.1vh,88px); width: min(276px,70%); margin: 0; }
+.in-room .progress li { text-shadow: 0 1px 3px #0d0814; font-size: 13px; }
+.in-room .workbench { display: block; }
+.in-room .workspace {
+  position: absolute; top: clamp(114px,13.7vh,147px); left: 50%; transform: translateX(-50%);
+  width: min(88%,720px); text-align: center; background: none; border: 0; padding: 0;
+}
+.in-room .workspace h1 {
+  font-size: clamp(29px,3.4vw,51px); letter-spacing: .06em; text-shadow: 0 1px 4px #0b0812,0 4px 25px #0b0812;
+}
+.in-room .workspace .section-copy {
+  font-size: 14px; text-shadow: 0 1px 5px #0b0812;
+  margin: 7px 0 0; color: #ddcfe1; overflow-wrap: anywhere;
+}
+.in-room .workspace .section-copy strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.in-room .workspace .placemat, .in-room .workspace .ritual-cards, .in-room .workspace .deck-strip { display: none; }
+.in-room .room-actions {
+  pointer-events: auto; position: fixed; z-index: 3; left: 50%; bottom: max(18px, env(safe-area-inset-bottom));
+  transform: translateX(-50%); width: max-content; max-width: calc(100% - 20px); margin: 0;
+  justify-content: center; gap: 6px; padding: 6px;
+  border: 1px solid #7c655c; border-radius: 10px; background: #201827ef; box-shadow: 0 10px 34px #08060daf;
+}
+.in-room .workspace { transform: none; left: 0; width: 100%; }
+.in-room .workspace h1, .in-room .workspace .section-copy { max-width: min(88%,720px); margin-inline: auto; }
+.in-room .room-actions button { white-space: nowrap; }
+.deck-pages { min-width: 0; gap: 2px; color: #ead8b6; font-size: 13px; }
+.deck-pages button { font-size: 24px; line-height: 1; padding-inline: 10px; }
+.in-room .room-sheet {
+  pointer-events: auto; position: fixed; top: clamp(165px,22vh,245px);
+  right: max(15px,3.1vw); bottom: max(87px, calc(env(safe-area-inset-bottom) + 69px)); z-index: 4;
+  width: min(415px,calc(100% - 30px)); max-height: 570px; overflow: auto; overflow-wrap: anywhere;
+  padding: 16px 18px; border: 1px solid #806b69; border-radius: 10px;
+  background: #1c1627f7; box-shadow: 0 8px 44px #0d0818cc;
+}
+.in-room .room-sheet .dialogue { background: none; border: 0; min-height: 0; max-height: none; padding: 0; }
+.in-room .room-sheet .dialogue-scroll { max-height: 320px; }
+.in-room .room-sheet .reading-note:first-of-type { padding-top: 4px; }
+.in-room .close-sheet { float: right; top: 0; position: sticky; z-index: 2; background: #221a30; margin: 0 0 7px 8px; }
+.in-room .sheet-follow { margin-top: 14px; }
+@media (max-width: 650px) {
+  #room-controls[data-spread=celtic] .slot-caption { font-size: 11px; letter-spacing: 0; }
+  .in-room .header-content { min-height: 52px; padding-inline: 9px; }
+  .in-room .site-header .brand { font-size: 18px; }
+  .in-room .site-header .moon-symbol { font-size: 27px; }
+  .in-room .site-header nav { gap: 2px; }
+  .in-room .site-header nav button { min-height: 36px; padding-inline: 5px; font-size: 12px; }
+  .in-room .progress { top: 61px; }
+  .in-room .workspace { top: 110px; }
+  .in-room .room-actions { max-width: calc(100% - 12px); bottom: max(11px,env(safe-area-inset-bottom)); gap: 3px; }
+  .in-room .room-actions button { padding-inline: 8px; font-size: 13px; }
+  .in-room .room-actions .deck-pages button { font-size: 22px; padding-inline: 7px; }
+  .in-room .room-sheet { right: 8px; bottom: max(70px,calc(env(safe-area-inset-bottom) + 59px)); top: auto; width: calc(100% - 16px); max-height: 53svh; }
+}
+@media (max-height: 610px) and (min-width: 651px) {
+  .in-room .header-content { min-height: 54px; }
+  .in-room .progress { top: 53px; }
+  .in-room .workspace { top: 93px; }
+  .in-room .room-actions { bottom: 7px; }
+}

@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#100e1b">
+  <meta name="description" content="从提问、洗牌到解读与追问，完成一场属于自己的韦特塔罗读牌。">
+  <title>月汐塔罗</title>
+  <link rel="stylesheet" href="./style.css">
+  <link rel="stylesheet" href="./immersive.css">
+</head>
+<body>
+  <header class="site-header">
+    <div class="header-content">
+      <a class="brand" href="./" aria-label="月汐塔罗首页"><span class="moon-symbol" aria-hidden="true">☾</span>月汐塔罗</a>
+      <nav aria-label="应用">
+        <button id="room-mode" class="plain" data-action="room-mode" aria-pressed="true" hidden>立体牌桌</button>
+        <button class="plain" data-action="help">读牌说明</button>
+        <button class="outline" data-action="new">新的读牌</button>
+      </nav>
+    </div>
+  </header>
+  <div id="room-layer" hidden>
+    <div id="room-canvas" aria-hidden="true"></div>
+    <div id="room-controls" aria-label="交互牌桌"></div>
+  </div>
+  <main id="app"></main>
+  <footer class="site-footer"><span>月汐塔罗</span><span>韦特–史密斯牌组 · 塔罗解读供个人反思</span></footer>
+  <dialog id="dialog"></dialog>
+  <div id="status" class="sr-only" role="status"></div>
+  <script type="module" src="./app.mjs"></script>
+</body>
+</html>
