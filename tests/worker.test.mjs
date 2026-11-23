@@ -30,12 +30,15 @@ test('Worker respects the existing spread contract and passes a real schema to t
       assert.equal(id,model);
       assert.equal(options.store,false);
       assert.equal(options.chat_template_kwargs.enable_thinking,false);
+      assert.ok(options.max_completion_tokens >= 1000);
       assert.equal(options.response_format.json_schema.schema.properties.details.minItems,1);
       const [system] = options.messages;
       assert.equal(system.role,'system');
       assert.match(system.content,/月汐塔罗.*线上塔罗师/);
       assert.match(system.content,/第一人称/);
       assert.match(system.content,/overview 第一句.*「我」.*直接回应/);
+      assert.match(system.content,/图像细节或牌义.{0,30}牌位.{0,30}正逆位/);
+      assert.doesNotMatch(system.content,/每张约30字/);
       assert.match(options.messages[1].content,/愚人/);
       return { choices:[{message:{content:'{"overview":"愚人关注起步","details":["尝试"],"next":"先做一次小尝试"}'}}] };
     },
@@ -105,7 +108,9 @@ test('Worker rejects a parapunctuated replay of its recent reply and anchors on 
   assert.equal(repeated.status,502);
   env.AI.run = async (_id,options)=>{
     assert.match(options.messages[0].content,/上一轮|上轮/);
-    assert.match(options.messages[0].content,/一到三句/);
+    assert.ok(options.max_completion_tokens >= 900);
+    assert.match(options.messages[0].content,/具体问题.*分段展开/);
+    assert.doesNotMatch(options.messages[0].content,/约一百字以内/);
     assert.doesNotMatch(options.messages[0].content,/凯尔特十字|逐张解读/);
     assert.deepEqual(options.messages.at(-1),{role:'user',content:followup});
     return {response:{text:'她昨晚已经主动来电，这回可以先问她是有事想说，还是想找时间聊聊。'}};

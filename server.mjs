@@ -4,7 +4,7 @@ import { readFile } from 'node:fs/promises';
 import { extname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { execFile, spawn } from 'node:child_process';
-import { inputsOf, extractOutput, offlineFormat, modelMessages } from './tarot-api.mjs';
+import { inputsOf, extractOutput, offlineFormat, completionBudget, modelMessages } from './tarot-api.mjs';
 import { allowApiRequest, parseAllowedOrigins } from './http-origin.mjs';
 
 const root = new URL('./public/', import.meta.url);
@@ -72,8 +72,8 @@ async function consult(request, response) {
       method: 'POST', redirect: 'error', signal: AbortSignal.timeout(backendOnly ? 90_000 : bundled ? 60_000 : 25_000),
       headers: { 'Content-Type': 'application/json', ...(apiKey ? { Authorization: 'Bearer ' + apiKey } : {}) },
       body: JSON.stringify({
-        model, ...(structuredOutput ? { response_format: offlineFormat(inputs), temperature: 0.35, max_tokens: inputs.kind === 'reading' ? 1450 : 350 } : {}),
-        messages: modelMessages(inputs, structuredOutput),
+        model, ...(structuredOutput ? { response_format: offlineFormat(inputs), temperature: 0.35, max_tokens: completionBudget(inputs) } : {}),
+        messages: modelMessages(inputs),
       }),
     });
     if (!result.ok) throw new Error('Model service unavailable');

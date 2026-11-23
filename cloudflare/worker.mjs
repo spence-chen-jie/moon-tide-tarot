@@ -1,5 +1,5 @@
 import { allowApiRequest, parseAllowedOrigins } from '../http-origin.mjs';
-import { inputsOf, extractOutput, offlineFormat, modelMessages } from '../tarot-api.mjs';
+import { inputsOf, extractOutput, offlineFormat, completionBudget, modelMessages } from '../tarot-api.mjs';
 
 const defaultModel = '@cf/qwen/qwen3.8-27b';
 const bodyLimit = 32_000;
@@ -64,10 +64,10 @@ export default {
 
     try {
       const raw = await env.AI.run(model,{
-        messages:modelMessages(inputs,true),
+        messages:modelMessages(inputs),
         response_format:offlineFormat(inputs),
         chat_template_kwargs:{enable_thinking:false},
-        max_completion_tokens:inputs.kind === 'reading' ? 1450 : 350,
+        max_completion_tokens:completionBudget(inputs),
         temperature:.35,
         store:false,
       });
