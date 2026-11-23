@@ -7,7 +7,7 @@ const status = document.querySelector('#music-status');
 const backgroundUrl = audio.getAttribute('src');
 let trackUrl;
 let tracks = [];
-let started = false;
+const autoplayEvents = new AbortController();
 audio.volume = .4;
 
 toggle.addEventListener('click', () => dialog.showModal());
@@ -19,7 +19,7 @@ function updateIndicator() {
 }
 
 audio.addEventListener('play', () => {
-  started = true;
+  autoplayEvents.abort();
   updateIndicator();
 });
 audio.addEventListener('pause', updateIndicator);
@@ -29,7 +29,7 @@ audio.addEventListener('error', () => {
   updateIndicator();
 });
 
-async function playTrack(index) {
+async function playTrack(index, automatic = false) {
   const file = tracks[index - 1];
   const previousUrl = trackUrl;
   trackUrl = file ? URL.createObjectURL(file) : undefined;
@@ -45,7 +45,7 @@ async function playTrack(index) {
   } catch (error) {
     if (audio.getAttribute('src') === selectedUrl && error.name === 'NotAllowedError') {
       status.hidden = false;
-      status.textContent = '点击播放器上的播放键。';
+      status.textContent = automatic ? '与页面互动后将开始播放背景音乐。' : '点击播放器上的播放键。';
     }
   }
 }
@@ -65,11 +65,15 @@ audio.addEventListener('ended', () => {
   if (queue.selectedIndex > 0) void playTrack(queue.selectedIndex % tracks.length + 1);
 });
 
-export function startTableMusic() {
-  if (started || queue.selectedIndex !== 0) return;
-  started = true;
-  void playTrack(0);
+function retryAutoplay(event) {
+  if (!event.isTrusted || !audio.paused || queue.selectedIndex !== 0) return;
+  void playTrack(0,true);
 }
+
+const gestureOptions = { capture:true, signal:autoplayEvents.signal };
+document.addEventListener('click',retryAutoplay,gestureOptions);
+document.addEventListener('keydown',retryAutoplay,gestureOptions);
+void playTrack(0,true);
 
 export function stopTableMusic() {
   if (queue.selectedIndex === 0) audio.pause();

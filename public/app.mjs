@@ -1,7 +1,7 @@
 import { cards, spreads, prompts, classify, deal, choose, composeReading, answerFollowup, conversationalReply, formatReport, drawSupplement, supplementRequest, cardNumber, focusedEntry } from './reading.mjs';
 import { TABLE_PAGE_SIZE, deckPageCount, tableState } from './table-layout.mjs';
 import { apiBase } from './deployment.mjs';
-import { startTableMusic, stopTableMusic } from './music.mjs';
+import { stopTableMusic } from './music.mjs';
 
 const app = document.querySelector('#app');
 const dialog = document.querySelector('#dialog');
@@ -53,7 +53,6 @@ function focusAfterRender(selector) {
 }
 
 function show(stage, message) {
-  if (stage === 'shuffle') startTableMusic();
   if (stage === 'home' || stage === 'report') stopTableMusic();
   session.stage = stage;
   save();
