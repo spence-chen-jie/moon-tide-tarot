@@ -4,9 +4,11 @@ const fileInput = document.querySelector('#music-file');
 const audio = document.querySelector('#music-audio');
 const queue = document.querySelector('#music-queue');
 const status = document.querySelector('#music-status');
+const backgroundUrl = audio.getAttribute('src');
 let trackUrl;
 let tracks = [];
-audio.volume = .3;
+let started = false;
+audio.volume = .4;
 
 toggle.addEventListener('click', () => dialog.showModal());
 document.querySelector('#music-choose').addEventListener('click', () => fileInput.click());
@@ -16,7 +18,10 @@ function updateIndicator() {
   toggle.setAttribute('aria-label', audio.paused ? '牌桌音乐' : '牌桌音乐，播放中');
 }
 
-audio.addEventListener('play', updateIndicator);
+audio.addEventListener('play', () => {
+  started = true;
+  updateIndicator();
+});
 audio.addEventListener('pause', updateIndicator);
 audio.addEventListener('error', () => {
   status.hidden = false;
@@ -25,19 +30,20 @@ audio.addEventListener('error', () => {
 });
 
 async function playTrack(index) {
-  const file = tracks[index];
+  const file = tracks[index - 1];
   const previousUrl = trackUrl;
-  const selectedUrl = trackUrl = URL.createObjectURL(file);
-  audio.src = trackUrl;
+  trackUrl = file ? URL.createObjectURL(file) : undefined;
+  const selectedUrl = trackUrl ?? backgroundUrl;
+  if (audio.getAttribute('src') !== selectedUrl) audio.setAttribute('src',selectedUrl);
   if (previousUrl) URL.revokeObjectURL(previousUrl);
   queue.selectedIndex = index;
-  audio.hidden = false;
+  audio.loop = index === 0;
   status.hidden = true;
   status.textContent = '';
   try {
     await audio.play();
   } catch (error) {
-    if (trackUrl === selectedUrl && error.name === 'NotAllowedError') {
+    if (audio.getAttribute('src') === selectedUrl && error.name === 'NotAllowedError') {
       status.hidden = false;
       status.textContent = '点击播放器上的播放键。';
     }
@@ -49,10 +55,22 @@ fileInput.addEventListener('change', () => {
   fileInput.value = '';
   if (!files.length) return;
   tracks = files;
-  queue.replaceChildren(...tracks.map(file => new Option(file.name)));
+  queue.replaceChildren(new Option('牌桌背景音乐'), ...tracks.map(file => new Option(file.name)));
   queue.hidden = false;
-  void playTrack(0);
+  void playTrack(1);
 });
 
 queue.addEventListener('change', () => void playTrack(queue.selectedIndex));
-audio.addEventListener('ended', () => void playTrack((queue.selectedIndex + 1) % tracks.length));
+audio.addEventListener('ended', () => {
+  if (queue.selectedIndex > 0) void playTrack(queue.selectedIndex % tracks.length + 1);
+});
+
+export function startTableMusic() {
+  if (started || queue.selectedIndex !== 0) return;
+  started = true;
+  void playTrack(0);
+}
+
+export function stopTableMusic() {
+  if (queue.selectedIndex === 0) audio.pause();
+}
