@@ -1,4 +1,5 @@
 const toggle = document.querySelector('#music-toggle');
+const toggleText = toggle.querySelector('span');
 const dialog = document.querySelector('#table-music');
 const fileInput = document.querySelector('#music-file');
 const audio = document.querySelector('#music-audio');
@@ -7,25 +8,31 @@ const status = document.querySelector('#music-status');
 const backgroundUrl = audio.getAttribute('src');
 let trackUrl;
 let tracks = [];
+let autoplayBlocked = false;
 const autoplayEvents = new AbortController();
-audio.volume = .4;
+audio.volume = .85;
 
 toggle.addEventListener('click', () => dialog.showModal());
 document.querySelector('#music-choose').addEventListener('click', () => fileInput.click());
 
 function updateIndicator() {
-  toggle.toggleAttribute('data-playing', !audio.paused);
-  toggle.setAttribute('aria-label', audio.paused ? '牌桌音乐' : '牌桌音乐，播放中');
+  const playing = !audio.paused && audio.readyState >= HTMLMediaElement.HAVE_FUTURE_DATA;
+  toggle.toggleAttribute('data-playing',playing);
+  toggleText.textContent = playing ? '播放中' : autoplayBlocked ? '待播放' : '音乐';
+  toggle.setAttribute('aria-label',playing ? '牌桌音乐，播放中' : '牌桌音乐');
 }
 
-audio.addEventListener('play', () => {
+audio.addEventListener('playing', () => {
+  autoplayBlocked = false;
   autoplayEvents.abort();
+  status.hidden = true;
   updateIndicator();
 });
+audio.addEventListener('waiting', updateIndicator);
 audio.addEventListener('pause', updateIndicator);
 audio.addEventListener('error', () => {
   status.hidden = false;
-  status.textContent = '这份音频无法播放。可以选择 MP3 或 M4A 文件。';
+  status.textContent = queue.selectedIndex === 0 ? '背景音乐加载失败，请刷新页面。' : '这份音频无法播放。可以选择 MP3 或 M4A 文件。';
   updateIndicator();
 });
 
@@ -44,8 +51,10 @@ async function playTrack(index, automatic = false) {
     await audio.play();
   } catch (error) {
     if (audio.getAttribute('src') === selectedUrl && error.name === 'NotAllowedError') {
+      autoplayBlocked = automatic;
       status.hidden = false;
-      status.textContent = automatic ? '与页面互动后将开始播放背景音乐。' : '点击播放器上的播放键。';
+      status.textContent = automatic ? '浏览器正在等待一次点击或按键。' : '点击播放器上的播放键。';
+      updateIndicator();
     }
   }
 }
@@ -66,15 +75,12 @@ audio.addEventListener('ended', () => {
 });
 
 function retryAutoplay(event) {
-  if (!event.isTrusted || !audio.paused || queue.selectedIndex !== 0) return;
+  if (!event.isTrusted || event.target === audio || !audio.paused || queue.selectedIndex !== 0) return;
   void playTrack(0,true);
 }
 
 const gestureOptions = { capture:true, signal:autoplayEvents.signal };
-document.addEventListener('click',retryAutoplay,gestureOptions);
-document.addEventListener('keydown',retryAutoplay,gestureOptions);
-void playTrack(0,true);
-
-export function stopTableMusic() {
-  if (queue.selectedIndex === 0) audio.pause();
+for (const event of ['pointerdown','pointerup','touchend','click','keydown']) {
+  document.addEventListener(event,retryAutoplay,gestureOptions);
 }
+void playTrack(0,true);
