@@ -6,6 +6,7 @@ on:
   workflow_dispatch:
 
 permissions:
+  actions: read
   contents: read
   pages: write
   id-token: write
@@ -37,7 +38,24 @@ jobs:
           TAROT_FRONTEND_ORIGIN: ${{ steps.pages.outputs.origin }}
       - run: node scripts/build-pages.mjs
       - uses: actions/upload-pages-artifact@v5
+        id: artifact
         with:
+          name: github-pages-${{ github.run_attempt }}
           path: dist/pages
+      - name: Wait for the Pages artifact
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ARTIFACT_ID: ${{ steps.artifact.outputs.artifact_id }}
+        run: |
+          for attempt in {1..8}; do
+            if [[ $(gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/$ARTIFACT_ID" --jq '.size_in_bytes > 0 and (.expired | not)' 2>/dev/null) == true ]]; then
+              exit 0
+            fi
+            sleep 4
+          done
+          echo 'The uploaded Pages artifact is not available yet.' >&2
+          exit 1
       - uses: actions/deploy-pages@v5
         id: deployment
+        with:
+          artifact_name: github-pages-${{ github.run_attempt }}
