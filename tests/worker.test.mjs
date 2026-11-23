@@ -37,7 +37,8 @@ test('Worker respects the existing spread contract and passes a real schema to t
       assert.match(system.content,/月汐塔罗.*线上塔罗师/);
       assert.match(system.content,/第一人称/);
       assert.match(system.content,/overview 第一句.*「我」.*直接回应/);
-      assert.match(system.content,/图像细节或牌义.{0,30}牌位.{0,30}正逆位/);
+      assert.match(system.content,/details .*牌义.*牌位和方向/);
+      assert.match(system.content,/抽到的牌、牌面解读、整体总结和可以怎么做/);
       assert.doesNotMatch(system.content,/每张约30字/);
       assert.match(options.messages[1].content,/愚人/);
       return { choices:[{message:{content:'{"overview":"愚人关注起步","details":["尝试"],"next":"先做一次小尝试"}'}}] };

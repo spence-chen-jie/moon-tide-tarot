@@ -232,9 +232,11 @@ nav button { font-size: 14px; }
 .reading-note { padding: 20px 0 0; overflow-wrap: anywhere; }
 .reading-note h2 { font-size: 25px; margin-bottom: 8px; }
 .reading-note p { color: var(--muted); white-space: pre-wrap; }
-.card-note { border-bottom: 1px solid #4b4054; padding: 10px 0; }
-.card-note h3 { color: var(--gold); font-size: 16px; }
-.card-note h3 span { color: var(--ink); font-weight: 500; padding-left: 8px; }
+.drawn-card-list { display: flex; flex-wrap: wrap; gap: 4px 16px; margin: 0; padding: 0; list-style: none; color: var(--muted); }
+.drawn-card-list strong { color: var(--ink); }
+.card-note { border-bottom: 1px solid #4b4054; padding: 12px 0; }
+.card-note h3 { display: flex; flex-wrap: wrap; gap: 2px 10px; color: var(--gold); font-size: 16px; margin-bottom: 5px; }
+.card-note h3 span { color: var(--ink); font-weight: 600; }
 .report-layout { grid-template-columns: minmax(0, 790px); justify-content: center; }
 .report {
   text-wrap: wrap; white-space: pre-wrap; overflow-wrap: anywhere; font: inherit; margin: 0;

@@ -1,4 +1,4 @@
-import { cards, spreads, prompts, classify, deal, choose, composeReading, answerFollowup, conversationalReply, formatReport, drawSupplement, supplementRequest, cardNumber, focusedEntry } from './reading.mjs';
+import { cards, spreads, prompts, classify, deal, choose, composeReading, answerFollowup, conversationalReply, formatReport, drawSupplement, supplementRequest, cardNumber, focusedEntry, cardReadingTitle } from './reading.mjs';
 import { TABLE_PAGE_SIZE, deckPageCount, tableState } from './table-layout.mjs';
 import { apiBase } from './deployment.mjs';
 import './music.mjs';
@@ -213,12 +213,13 @@ function drawView() {
 function readingAnalysis() {
   const note = session.reading;
   if (!note) return '<p class="section-copy" role="status">正在按照牌位整理这次读牌…</p>';
-  return `<section class="reading-note"><h2>整组牌的提示</h2><p>${safe(note.overview)}</p></section>
-    <section class="reading-note card-notes"><h2>逐张读牌</h2>${note.entries.map(entry => `<div class="card-note">
-      <h3>${entry.position} <span>${entry.card} · ${entry.orientation}</span></h3>
+  return `<section class="reading-note"><h2>抽到的牌</h2><ul class="drawn-card-list" role="list">${note.entries.map(entry => `<li><strong>${safe(entry.card)}</strong> · ${safe(entry.orientation)}</li>`).join('')}</ul></section>
+    <section class="reading-note card-notes"><h2>牌面解读</h2>${note.entries.map((entry,index) => `<div class="card-note">
+      <h3>${safe(cardReadingTitle(entry,index))}<span>${safe(entry.card)}（${safe(entry.orientation)}）</span></h3>
       <p>${safe(entry.detail ?? ('这个位置看' + entry.purpose + '。这张牌在这里提示你留意' + entry.meaning + '。'))}</p>
     </div>`).join('')}</section>
-    <section class="reading-note"><h2>可以尝试的下一步</h2><p>${safe(note.next)}</p></section>`;
+    <section class="reading-note"><h2>整体总结</h2><p>${safe(note.overview)}</p></section>
+    <section class="reading-note"><h2>可以怎么做</h2><p>${safe(note.next)}</p></section>`;
 }
 
 function readingView(inRoom) {

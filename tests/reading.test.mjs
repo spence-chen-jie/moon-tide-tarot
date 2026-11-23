@@ -11,7 +11,7 @@ test('78 unique cards and fully defined skill spreads', () => {
     assert.ok(card.name && card.upright && card.reversed);
   }
   assert.deepEqual(Object.fromEntries(Object.entries(spreads).map(([id, spread]) => [id,spread.positions.length])),
-    { single:1, three:3, timeline:3, choice:5, celtic:10 });
+    { single:1, daily:3, three:3, timeline:3, choice:5, celtic:10 });
 });
 
 test('the local artwork includes every card in the deck', async () => {
@@ -25,6 +25,10 @@ test('specific and broad questions are differentiated', () => {
   assert.equal(classify('在现公司内部转岗还是出去找工作？').topic, 'decision');
   assert.equal(classify('接下来这份工作应该怎么推进？').needsClarification, false);
   assert.deepEqual(classify('看看日运').suggested, 'single');
+  assert.equal(classify('帮我抽三张塔罗牌看看今天运势').suggested, 'daily');
+  assert.equal(classify('3张看日运').needsClarification, false);
+  assert.equal(classify('帮我抽一张牌看看今天的整体运势').suggested, 'single');
+  assert.equal(classify('抽三张牌看明天面试的运势').suggested, 'three');
   assert.equal(classify('随手抽一张').needsClarification, false);
   assert.equal(classify('要留在现在的岗位还是接受新公司的邀请？').suggested, 'choice');
   assert.equal(classify('我想看这段关系过去到现在怎么演变').suggested, 'timeline');
@@ -68,6 +72,10 @@ test('reading, follow-up and report retain revealed cards and positions', () => 
   assert.ok(reply.includes(session.reading.entries[1].card));
   assert.ok(reply.includes(session.reading.entries[1].position));
   const report = formatReport(session);
+  assert.ok(report.indexOf('抽到的牌') < report.indexOf('牌面解读'));
+  assert.ok(report.indexOf('牌面解读') < report.indexOf('整体总结'));
+  assert.ok(report.indexOf('整体总结') < report.indexOf('可以怎么做'));
+  assert.match(report,/第一张｜现状/);
   for (const entry of session.reading.entries) {
     assert.ok(report.includes(entry.card));
     assert.ok(report.includes(entry.position));

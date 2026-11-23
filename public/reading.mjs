@@ -6,6 +6,14 @@ export const spreads = {
     name: '单张聚焦', description: '从一个角度看清眼前的重点。',
     positions: [['眼前的重点','此刻最值得留意的主题']],
   },
+  daily: {
+    name: '今日运势', description: '用三张牌看看今天适合做什么、怎么与人相处、哪里需要多留意。',
+    positions: [
+      ['今日重点','今天值得投入精力的事或最能体会到的主题'],
+      ['人际与情感','今天与人交流、相处和表达的方式'],
+      ['需要留意','容易忽略的细节或可以提前调整的做法'],
+    ],
+  },
   three: {
     name: '三张牌阵', description: '梳理现状、阻碍，以及可以尝试的一步。',
     positions: [['现状','问题目前的状态'], ['阻碍','容易卡住的地方或被忽略的因素'], ['建议','可以尝试的行动或态度']],
@@ -45,11 +53,15 @@ export function classify(question) {
   const topic = /还是|选哪|选项|怎么选|做决定|两种|选择/.test(text) ? 'decision'
     : /感情|恋爱|前任|喜欢|复合|婚|伴侣|分手|关系|联系/.test(text) ? 'love'
     : /工作|岗位|职场|事业|辞职|跳槽|公司|同事|实习/.test(text) ? 'work' : 'general';
-  const single = /日运|今日一抽|随手抽|随便抽|单张|抽一张|一个提示|一句话|眼前的重点/.test(text);
+  const daily = /日运|(?:今天|今日)(?:的)?(?:整体)?运势/.test(text);
+  const threeCards = /(?:三|3)\s*张/.test(text);
+  const single = /今日一抽|单张|(?:一|1)\s*张/.test(text)
+    || !threeCards && (daily || /随手抽|随便抽|一个提示|一句话|眼前的重点/.test(text));
   const options = text.split(/还是|或者|选项\s*[AB甲乙]/i).filter(part => part.trim().length >= 4);
-  const needsClarification = !single && (text.length < 9 || text === '我正在考虑一个选择'
+  const needsClarification = !single && !(daily && threeCards) && (text.length < 9 || text === '我正在考虑一个选择'
     || /^(我想问|我想看|帮我看|看看)?(感情|工作|事业|运势|选择|未来|塔罗)[吧啊呢！。？?]*$/.test(text));
-  const suggested = single ? 'single' : /凯尔特|深入|多方|复杂|全面|来龙去脉/.test(text) ? 'celtic'
+  const suggested = single ? 'single' : daily && threeCards ? 'daily'
+    : /凯尔特|深入|多方|复杂|全面|来龙去脉/.test(text) ? 'celtic'
     : /五张|二选一/.test(text) || (topic === 'decision' && options.length > 1) ? 'choice'
     : /过去.*现在|过去.*当下|变化过程|演变|发展过程/.test(text) ? 'timeline' : 'three';
   return { topic, needsClarification, suggested };
@@ -113,7 +125,10 @@ export function composeReading(session) {
     : entries.length === 1
     ? '围绕「' + session.question + '」，' + first.card + '把注意力带到' + first.meaning + '。可以用这个方向检查眼前的处境。'
     : '围绕「' + session.question + '」，可以从「' + first.meaning + '」理解目前的处境。' + blocking.card + '落在' + blocking.position + '位，把' + blocking.meaning + '带进了这件事。' + last.card + '给出的另一个观察方向是「' + last.meaning + '」。';
-  return { entries, overview, next: prompts[classify(session.question).topic][2] };
+  const next = session.spread === 'daily'
+    ? '今天可以先挑一件手头的事推进，再看看有没有一段对话值得认真听完。发消息或交任务前，用一分钟核对容易漏掉的细节。'
+    : prompts[classify(session.question).topic][2];
+  return { entries, overview, next };
 }
 
 export function conversationalReply(question) {
@@ -158,13 +173,21 @@ export function focusedEntry(entries, question) {
     ?? null;
 }
 
+export function cardReadingTitle(entry, index) {
+  const number = '一二三四五六七八九十'[index];
+  return '第' + number + '张｜' + entry.position;
+}
+
 export function formatReport(session) {
   const note = session.reading;
-  const report = ['月汐塔罗 · 读牌报告', '问题：' + session.question, '牌阵：' + spreads[session.spread].name, '', note.overview, ''];
-  for (const entry of note.entries) {
-    report.push(entry.position + '｜' + entry.card + ' · ' + entry.orientation, entry.detail ?? entry.meaning, '');
-  }
-  report.push('可以尝试的下一步', note.next);
+  const report = [
+    '月汐塔罗 · 读牌报告', '问题：' + session.question, '牌阵：' + spreads[session.spread].name, '',
+    '抽到的牌', note.entries.map(entry => entry.card + ' · ' + entry.orientation).join(' ｜ '), '', '牌面解读',
+  ];
+  note.entries.forEach((entry,index) => {
+    report.push(cardReadingTitle(entry,index) + ' · ' + entry.card + '（' + entry.orientation + '）', entry.detail ?? entry.meaning, '');
+  });
+  report.push('整体总结', note.overview, '', '可以怎么做', note.next);
   for (const extra of session.supplements ?? []) report.push('', extra.position + '｜' + extra.card + ' · ' + extra.orientation, '澄清：' + extra.purpose, extra.meaning);
   for (const step of session.replies) report.push('', '追问：' + step.question, step.answer);
   return report.join('\n');
